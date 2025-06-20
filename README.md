@@ -1,5 +1,3 @@
-# PRODIGY_WD_Task2
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
