@@ -1,141 +1,147 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Classic Tic-Tac-Toe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stopwatch App</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to bottom right, #1e3c72, #2a5298);
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      color: #fff;
-    }
-    .container {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
       text-align: center;
+      padding: 40px;
     }
+
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 30px;
       font-size: 3em;
     }
-    .board {
-      display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-gap: 10px;
-      margin: 0 auto;
+
+    #display {
+      font-size: 3em;
+      margin: 20px auto;
+      padding: 20px;
+      border: 3px solid white;
+      border-radius: 10px;
+      width: 300px;
+      background: rgba(255,255,255,0.1);
     }
-    .cell {
-      width: 100px;
-      height: 100px;
-      background-color: #f4f4f4;
-      color: #333;
-      font-size: 2.5em;
-      font-weight: bold;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background 0.3s;
+
+    .buttons {
+      margin: 20px;
     }
-    .cell:hover {
-      background-color: #ddd;
-    }
-    #status {
-      margin-top: 20px;
-      font-size: 1.2em;
-    }
+
     button {
-      margin-top: 20px;
       padding: 10px 20px;
-      font-size: 1em;
-      background-color: #ffffff;
-      color: #2a5298;
+      font-size: 1.1em;
+      margin: 0 10px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background 0.3s, color 0.3s;
+      transition: background 0.3s ease;
     }
+
+    #startStop {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    #reset {
+      background-color: #f44336;
+      color: white;
+    }
+
+    #lap {
+      background-color: #2196F3;
+      color: white;
+    }
+
     button:hover {
-      background-color: #2a5298;
-      color: #fff;
+      opacity: 0.9;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: rgba(255, 255, 255, 0.1);
+      margin: 5px auto;
+      padding: 8px 12px;
+      width: 200px;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Tic-Tac-Toe</h1>
-    <div class="board" id="board">
-      <div class="cell" data-index="0"></div>
-      <div class="cell" data-index="1"></div>
-      <div class="cell" data-index="2"></div>
-      <div class="cell" data-index="3"></div>
-      <div class="cell" data-index="4"></div>
-      <div class="cell" data-index="5"></div>
-      <div class="cell" data-index="6"></div>
-      <div class="cell" data-index="7"></div>
-      <div class="cell" data-index="8"></div>
-    </div>
-    <div id="status">Player X's turn</div>
-    <button onclick="restartGame()">Restart</button>
+  <h1>Stopwatch</h1>
+  <div id="display">00:00:00</div>
+  <div class="buttons">
+    <button id="startStop">Start</button>
+    <button id="lap">Lap</button>
+    <button id="reset">Reset</button>
   </div>
+  <h2>Laps</h2>
+  <ul id="laps"></ul>
+
   <script>
-    const cells = document.querySelectorAll('.cell');
-    const statusText = document.getElementById('status');
-    let currentPlayer = 'X';
-    let board = ['', '', '', '', '', '', '', '', ''];
-    let gameActive = true;
+    let startTime = 0;
+    let elapsed = 0;
+    let timerInterval;
+    let isRunning = false;
 
-    const winningCombos = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6]
-    ];
+    const display = document.getElementById('display');
+    const startStopBtn = document.getElementById('startStop');
+    const lapBtn = document.getElementById('lap');
+    const resetBtn = document.getElementById('reset');
+    const lapsList = document.getElementById('laps');
 
-    function handleClick(e) {
-      const index = e.target.getAttribute('data-index');
-      if (board[index] !== '' || !gameActive) return;
+    function formatTime(ms) {
+      let totalSeconds = Math.floor(ms / 1000);
+      let minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      let seconds = String(totalSeconds % 60).padStart(2, '0');
+      let centiseconds = String(Math.floor((ms % 1000) / 10)).padStart(2, '0');
+      return `${minutes}:${seconds}:${centiseconds}`;
+    }
 
-      board[index] = currentPlayer;
-      e.target.textContent = currentPlayer;
-      if (checkWinner()) {
-        statusText.textContent = `Player ${currentPlayer} wins!`;
-        gameActive = false;
-      } else if (board.every(cell => cell !== '')) {
-        statusText.textContent = "It's a draw!";
-        gameActive = false;
+    function updateDisplay() {
+      display.textContent = formatTime(elapsed);
+    }
+
+    startStopBtn.addEventListener('click', () => {
+      if (!isRunning) {
+        startTime = Date.now() - elapsed;
+        timerInterval = setInterval(() => {
+          elapsed = Date.now() - startTime;
+          updateDisplay();
+        }, 10);
+        startStopBtn.textContent = 'Pause';
+        isRunning = true;
       } else {
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        statusText.textContent = `Player ${currentPlayer}'s turn`;
+        clearInterval(timerInterval);
+        startStopBtn.textContent = 'Start';
+        isRunning = false;
       }
-    }
+    });
 
-    function checkWinner() {
-      return winningCombos.some(combo => {
-        return combo.every(i => board[i] === currentPlayer);
-      });
-    }
+    resetBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      elapsed = 0;
+      updateDisplay();
+      lapsList.innerHTML = '';
+      startStopBtn.textContent = 'Start';
+      isRunning = false;
+    });
 
-    function restartGame() {
-      board = ['', '', '', '', '', '', '', '', ''];
-      gameActive = true;
-      currentPlayer = 'X';
-      cells.forEach(cell => cell.textContent = '');
-      statusText.textContent = "Player X's turn";
-    }
-
-    cells.forEach(cell => cell.addEventListener('click', handleClick));
+    lapBtn.addEventListener('click', () => {
+      if (isRunning) {
+        const li = document.createElement('li');
+        li.textContent = formatTime(elapsed);
+        lapsList.appendChild(li);
+      }
+    });
   </script>
 </body>
 </html>
